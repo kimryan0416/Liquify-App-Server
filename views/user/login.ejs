@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>User Login - Liquify</title>
+		<link rel="stylesheet" href="/stylesheets/all.css" />
+	</head>
+	<body>
+		<h1>Login</h1>
+		<form id="loginForm" name="loginForm" method="POST" action="/user/login" novalidate="novalidate">
+			<p class="italic">
+				If you do not have an account, you can create an account <a href="/user/create">here</a>.
+			</p>
+			<% if (error && error.length > 0) { %>
+				<p id="loginError" class="formMessage formError"><%= error %></p>
+			<% } else { %>
+				<p id="loginError" class="formMessage formError hidden"></p>
+			<% } %>
+
+			<div class="inputContainer">
+				<label for="loginEmail">
+					Email <span class="required">*</span>
+				</label>
+				<input 
+					id="email" 
+					name="email" 
+					class="input" 
+					type="email" 
+					required="required" 
+					value="<%= email %>" 
+					placeholder="john.doe@email.com">
+			</div>
+			<div class="inputContainer">
+				<label for="loginPassword">
+					Password <span class="required">*</span>
+				</label>
+				<input 
+					id="password" 
+					name="password" 
+					class="input" 
+					type="password" 
+					required="required"
+				>
+			</div>
+			<div class="inputContainer">
+				<input 
+					id="submitLogin" 
+					class="submitInput" 
+					type="submit" 
+					value="Login User"
+				>
+			</div>
+		</form>
+		<script>
+			var formEl = document.getElementById('loginForm'),
+				errorEl = document.getElementById('loginError'),
+				emailInput = document.getElementById('email'),
+				passwordInput = document.getElementById('password');
+
+			function preventDefaults (e) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
+
+			function printError (mess=null) {
+				if (!mess) {
+					errorEl.innerHTML = "";
+					errorEl.classList.add('hidden');
+				} else {
+					errorEl.innerHTML = mess;
+					errorEl.classList.remove('hidden');
+				}
+				return;
+			}
+
+			function processLogin(e) {
+				var email = emailInput.value.trim(),
+					password = passwordInput.value.trim();
+				if (email.length == 0 || password.length == 0) {
+					printError("Please input both your email and your password.")
+					preventDefaults(e);
+					return false;
+				}
+				printError();
+				return true;
+			}
+
+			formEl.addEventListener('submit', processLogin);
+		</script>
+	</body>
+</html>

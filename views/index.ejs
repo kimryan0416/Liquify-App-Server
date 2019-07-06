@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>LiquifySandbox</title>
+		<meta charset="utf-8" />
+	</head>
+	<body>
+		<h1>Liquify Sandbox!</h1>
+		<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+		<script type="text/javascript" src="/javascripts/global.js"></script>
+		<script>
+			const PLAID_PUBLIC_KEY = '<%= PLAID_PUBLIC_KEY %>';
+			const ENVIRONMENT = '<%= ENVIRONMENT %>';
+			const PLAID_PRODUCTS = '<%= PLAID_PRODUCTS %>';
+			const PLAID_COUNTRY_CODES = '<%= PLAID_COUNTRY_CODES %>'.split(',');
+			console.log(PLAID_PUBLIC_KEY);
+			initializeLiquify(
+				'Liquify Sandbox',
+				ENVIRONMENT,
+				PLAID_PRODUCTS,
+				PLAID_PUBLIC_KEY,
+				PLAID_COUNTRY_CODES
+			);
+		</script>
+	</body>
+</html>

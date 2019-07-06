@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>User Logout - Liquify</title>
+		<link rel="stylesheet" href="/stylesheets/all.css" />
+	</head>
+	<body>
+		<h1>Logout?</h1>
+		<form id="logoutForm" name="logoutForm" method="POST" action="/user/logout" novalidate="novalidate">
+			<p>
+				Hey <%= name %>! Do you wish to log out?
+			</p>
+			<p class='italic'>
+				You will be redirected to the login screen immediately after.
+			</p>
+			<div class="inputContainer">
+				<input id="returnBack" class='button' type="button" value='return'>
+				<input id="submitLogout" class="submitInput formError" type="submit" value="logout"
+				>
+			</div>
+		</form>
+		<script>
+			var formEl = document.getElementById('logoutForm'),
+				returnButton = document.getElementById('returnBack'),
+				logoutButton = document.getElementById('submitLogout');
+
+			function preventDefaults (e) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
+
+			function processLogin(e) {
+				preventDefaults(e);
+				/*
+				var email = emailInput.value.trim(),
+					password = passwordInput.value.trim();
+				if (email.length == 0 || password.length == 0) {
+					printError("Please input both your email and your password.")
+					preventDefaults(e);
+					return false;
+				}
+				printError();
+				return true;
+				*/
+				console.log("hello boy");
+			}
+
+			formEl.addEventListener('submit', processLogin);
+
+		</script>
+	</body>
+</html>

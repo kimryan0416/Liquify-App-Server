@@ -1,0 +1,76 @@
+/* --- Color Definitions --- */
+$main-color: rgb(255,255,255);
+
+/* --- Block Definitions --- */
+@mixin round-borders {
+	box-sizing: border-box;
+	padding: 5px 10px 5px 10px;
+	border-radius: 10px;
+	border:1px solid rgb(0,0,0);
+}
+
+body {
+	margin:0;
+	padding:5px;
+	font-size:15px;
+	background-color: $main-color;
+
+	form {
+		label {
+			font-weight: bold;
+			font-size:2em;
+			display:block;
+		}
+		label.smallerLabel {
+			font-size:0.75em;
+			font-weight:normal;
+		}
+
+		input[type="text"], input[type="email"], input[type="password"] {
+			font-size:1.25em;
+			@include round-borders;
+		}
+
+		.inputContainer {
+			display:block;
+			margin-bottom:15px;
+		}
+
+		.formMessage {
+			display:block;
+			color:white;
+			padding:5px;
+		}
+		.formMessage.hidden {
+			display:none;
+		}
+		.formError {
+			background-color: red;
+		}
+		.formBlue {
+			background-color: blue;
+		}
+
+		.button {
+			display:inline-block;
+			font-size:15px;
+			color:white;
+			padding:10px;
+		}
+		.button:hover {
+			cursor:pointer;
+			text-decoration: underline;
+		}
+	}
+
+	.required {
+		color: red;
+	}
+
+	.inputError {
+		display:none;
+	}
+	.inputError.visible {
+		display:block;
+	}
+}
