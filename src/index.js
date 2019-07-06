@@ -180,15 +180,6 @@ app.use('/user/',userRouter);
 app.use('/admin/',adminRouter);
 app.use('/transactions/',transactionsRouter);
 
-// : Basic App Interface Request handling
-app.get('/', (request,response,next) => {
-	if (!request.session.user.session_id) {
-		return response.redirect('/user/login');
-	}
-	return response.render('index.ejs');
-});
-
-
 // --------------------------------------------
 // --- SERVER SETUP
 // --------------------------------------------
