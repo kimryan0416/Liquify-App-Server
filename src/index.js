@@ -35,6 +35,7 @@ const userRouter = require('../routes/user');
 const adminRouter = require('../routes/admin');
 const transactionsRouter = require('../routes/transactions');
 const budgetsRouter = require('../routes/budgets');
+const learnRouter = require('../routes/learn');
 
 
 // --------------------------------------------
@@ -181,6 +182,7 @@ app.use('/user/',userRouter);
 app.use('/admin/',adminRouter);
 app.use('/transactions/',transactionsRouter);
 app.use('/budgets/',budgetsRouter);
+app.use('/learn/',learnRouter);
 
 // --------------------------------------------
 // --- SERVER SETUP
