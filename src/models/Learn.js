@@ -53,7 +53,8 @@ exports.validate = (method) => {
 								break;
 							}
 							case 'finAid': {
-								if (['intro','applying','types','loans','repayment'].indexOf(value) == -1) valid = false;
+								if (['intro','applying','types','loans','repaying'].indexOf(value) == -1) valid = false;
+								break;
 							}
 							default: {
 								valid = false;
