@@ -11,6 +11,7 @@ const path = require('path');
 const {
 	createHash,		// Creating a hash from a password or any given string
 	verifyHash,		// Verifying if a provided string and a hash are valid
+	encryptData,
 } = require(path.join(__dirname,'../src/common.js'));
 
 // : Use 'parseurl' for removing certain pages from our "visited" list in our session data
@@ -35,6 +36,10 @@ router.get('/hash/:pass', (request,response,next)=>{
 		hash: hash
 	});
 });
-
+router.post('/encrypt',(request,response,next)=>{
+	var data = request.body.data;
+	var encrypted = encryptData(data);
+	return response.json({original:data,encrypted:encrypted});
+});
 
 module.exports = router;

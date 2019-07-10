@@ -1,6 +1,12 @@
+// : dotenv required for reading local '.env' file
+require('dotenv').config({});
+	// : Get our Encryption key from our environment variables
+	const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET;
 const util = require('util');
 const path = require('path');
-const crypto = require('crypto');
+const Cryptr = require('cryptr');
+	const cryptr = new Cryptr(ENCRYPTION_SECRET);
+const crypto = require('crypto');	// : DEFAULT NODE APP - DO NOT DELETE
 const bcrypt = require('bcrypt');
 	const saltRounds = 10;
 const nodemailer = require("nodemailer");
@@ -30,6 +36,15 @@ const isArray = a => {
 const prettyPrintResponse = response => {
   console.log(util.inspect(response, {colors: true, depth: 4}));
 };
+
+const encryptData = (data) => {
+	var toEncrypt = (typeof data === 'object') ? JSON.stringify(data) : data;
+	return cryptr.encrypt(toEncrypt);
+}
+
+const decryptData = (encryptedString) => {
+	return cryptr.decrypt(encryptedString);
+}
 
 // : Creating a hash from a password or any given string
 const createHash = (phrase) => {
@@ -210,4 +225,7 @@ module.exports = {
 	performQuery,
 	commitTransaction,
 	sendEmail,
+	isArray,
+	encryptData,
+	decryptData,
 }

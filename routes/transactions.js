@@ -40,6 +40,10 @@ const {
 
 router.post('/', Transaction.validate('session'), Transaction.get_all_transactions);
 
+router.post('/items', Transaction.validate('session'), (request,response,next)=>{
+	return response.status(200).json(null);
+});
+
 /*
 // --------------------------------------------
 // --- LOGIN REQUEST HANDLING ---

@@ -11,7 +11,7 @@
 // --- REQUIRE() STATEMENTS ---
 // --------------------------------------------
 const { body, check, validationResult, sanitizeBody } = require('express-validator');
-const { performQuery, beginTransactions, verifyHash, createHash, createRandomHash, generateRandomNumber, sendEmail } = require('../common');
+const { performQuery, beginTransactions, verifyHash, createHash, createRandomHash, generateRandomNumber, sendEmail, encryptData, decryptData } = require('../common');
 
 const sendResponse = (response, status, success, msg=null) => {
   return response.status(status).json({success:success,msg:msg});
@@ -140,6 +140,14 @@ exports.validate = (method) => {
           .isLength({min:1})
       ]
     }
+    case 'items': {
+      return [
+        body('session_id','Session ID is Invalid')
+          .trim()
+          .exists()
+          .isLength({min:1})
+      ]
+    }
   }
 }
 
@@ -169,7 +177,7 @@ exports.login = (request,response,next) => {
     } catch(e) {
       // If some error in query execution, we release the connection and reject w/ Error
       connection.release();
-      let err = e.msg || e;
+      let err = e.sqlMessage || e;
       return sendResponse(response, 503, false, err);
     }
 
@@ -184,15 +192,13 @@ exports.login = (request,response,next) => {
         user_legal_name = user.legal_name,
         user_email = user.email,
         user_valid = user.valid,
-        user_items = [],
-        //currentDate = String(new Date().getTime()),
         fingerprint_hash = fingerprint;
-     
-    // : Get all banks (aka Items) associated with user
-    query = 'SELECT item_id, access_token, active FROM `Items` WHERE user_id = ?';
+
+    // : Get all Budgets associated with user
+    query = 'SELECT budget_id FROM `Budgets` WHERE user_id = ?';
     params = [user_id];
     try {
-      user_items = await performQuery(connection, query, params);
+      user_budgets = await performQuery(connection, query, params);
     } catch(e) {
       // If some error in query execution, we release the connection and reject w/ Error
       connection.release();
@@ -265,7 +271,7 @@ exports.login = (request,response,next) => {
         _legal_name:  user_legal_name,
         _email:     user_email,
         _valid:     user_valid,
-        _items:     user_items
+        _budgets:   user_budgets
       }));
     },()=>{
       connection.release();
@@ -299,7 +305,7 @@ exports.resend_verification = (request, response, next) => {
     } catch(e) {
       // If some error in query execution, we release the connection and reject w/ Error
       connection.release();
-      let err = e.msg || e;
+      let err = e.sqlMessage || e;
       return sendResponse(response, 503, false, err);
     }
 
@@ -321,7 +327,7 @@ exports.resend_verification = (request, response, next) => {
       var emailResults = await sendEmail('verification', {name:user.legal_name, code:newCode}, user.email);
     } catch(e) {
       connection.release();
-      let err = e.msg || e;
+      let err = (e.sqlMessage) ? e.sqlMessage : (e.msg) ? e.msg : e;
       return sendResponse(response, 503, false, err);
     }
     connection.release();
@@ -351,7 +357,7 @@ exports.verify = (request, response, next) => {
     } catch(e) {
       // If some error in query execution, we release the connection and reject w/ Error
       connection.release();
-      let err = e.msg || e;
+      let err = e.sqlMessage || e;
       return sendResponse(response, 503, false, err);
     }
      if (results.length == 0) {
@@ -383,7 +389,7 @@ exports.verify = (request, response, next) => {
         if (err) {
           connection.rollback(()=>{
             connection.release();
-            let err = e.msg || error;
+            let err = e.sqlMessage || error;
             throw err;
           }); 
         } else {
@@ -394,7 +400,7 @@ exports.verify = (request, response, next) => {
     } catch(e) {
       connection.rollback(()=>{
         connection.release();
-        let err = e.msg || error;
+        let err = e.sqlMessage || error;
         return sendResponse(response, 503, false, err);
       }); 
     }
@@ -422,7 +428,7 @@ exports.logout = (request, response, next) => {
       return sendResponse(response, 200, true, null);
     } catch(e) {
       connection.release();
-      let err = e.msg || error;
+      let err = e.sqlMessage || error;
       return sendResponse(response, 503, false, err);
     }
   });
@@ -449,10 +455,10 @@ exports.account = (request, response, next) => {
     } catch(e) {
       // If some error in query execution, we release the connection and reject w/ Error
       connection.release();
-      let err = e.msg || e;
+      let err = e.sqlMessage || e;
       return sendResponse(response, 503, false, err);
     }
-     if (results.length == 0) {
+    if (results.length == 0) {
       connection.release();
       return sendResponse(response, 404, false, 'The provided session does not exist within our Database!');
     }  
@@ -466,7 +472,7 @@ exports.account = (request, response, next) => {
     } catch(e) {
       // If some error in query execution, we release the connection and reject w/ Error
       connection.release();
-      let err = e.msg || e;
+      let err = e.sqlMessage || e;
       return sendResponse(response, 503, false, err);
     }
     if (results.length > 0) {
@@ -517,10 +523,10 @@ exports.account = (request, response, next) => {
   });
 }
 
-exports.save_access_token = (request,response,next) => {
-  var {session_id, access_token, item_id} = request.body;
+exports.items = (request,response,next) => {
+  var client = request.plaid_client;
+  var {session_id} = request.body;
   var {errors} = validationResult(request);
-  // : If we got any errors, we send the user right back to the login form with the appropriate values
   if (errors.length > 0) {
     return sendResponse(response,404,false,errors[0].msg);
   }
@@ -528,19 +534,100 @@ exports.save_access_token = (request,response,next) => {
   p.getConnection(async(error,connection)=>{
     if (error) {
       let err = error.msg || error;
+      return sendResponse(response,503,false,err);
+    }
+    var query = 'SELECT t1.item_id AS provided_id, t1.item_data AS item_data FROM `Items` AS t1 LEFT JOIN `User_Sessions` AS t2 ON t1.user_id = t2.user_id WHERE t2.session_id = ?';
+    var params = [session_id];
+    var items_raw = null;
+    try {
+      items_raw = await performQuery(connection, query, params);
+    } catch (e) {
+       // If some error in query execution, we release the connection and reject w/ Error
+      connection.release();
+      let err = e.sqlMessage || e;
       return sendResponse(response, 503, false, err);
     }
-    var query = 'INSERT INTO `Items` (`user_id`, `item_id`, `access_token`) VALUES ((SELECT user_id FROM `User_Sessions` WHERE session_id = ? LIMIT 1), ?, ?)';
-    var params = [session_id, item_id, access_token];
+    if (items_raw.length == 0) {
+      return sendResponse(response,200,true,[]);
+    }
+    var itemPromises = Promise.all(items_raw.map(i=>{
+      return new Promise(resolve=>{
+        var raw = JSON.parse(decryptData(i.item_data));
+        client.getItem(raw.access_token, function(error, itemResponse) {
+          if (error != null) {
+            console.log(error);
+            resolve();
+          }
+          // Also pull information about the institution
+          client.getInstitutionById(itemResponse.item.institution_id, function(err, instRes) {
+            if (err != null) {
+              var msg = 'Unable to pull institution information from the Plaid API.';
+              console.log(msg + '\n' + JSON.stringify(error));
+              resolve();
+            } else {
+              /*
+              client.getAccounts(raw.access_token, function(error, accountsResponse) {
+                if (error != null) {
+                  console.log(error);
+                  resolve();
+                } else {
+                  resolve({
+                    item: itemResponse.item,
+                    institution: instRes.institution,
+                   account: accountsResponse
+                  });
+                }
+              });
+              */
+              resolve({
+                provided_id: i.provided_id,
+                item_id: raw.item_id,
+                access_token: raw.access_token,
+                item: itemResponse.item,
+                institution: instRes.institution,
+              });
+            }
+          });
+        });
+      });
+    }));
+
+    itemPromises.then(items=>{
+      console.log(items);
+      connection.release();
+      return sendResponse(response,200,true,items);
+    })
+  })
+}
+
+exports.save_access_token = (request,response,next) => {
+  var {session_id, access_token, item_id} = request.body;
+  var {errors} = validationResult(request);
+  // : If we got any errors, we send the user right back to the login form with the appropriate values
+  if (errors.length > 0) {
+    return sendResponse(response,404,false,errors[0].msg);
+  }
+  // : Encrypt data
+  var item_data = encryptData({
+    item_id: item_id,
+    access_token: access_token
+  });
+
+  var p = request.pool;
+  p.getConnection(async(error,connection)=>{
+    if (error) {
+      let err = error.msg || error;
+      return sendResponse(response, 503, false, err);
+    }
+    var query = 'INSERT INTO `Items` (`user_id`, `item_data`) VALUES ((SELECT user_id FROM `User_Sessions` WHERE session_id = ? LIMIT 1), ?)';
+    var params = [session_id, item_data];
     try {
       await performQuery(connection, query, params);
-      var new_items = await performQuery(connection, 'SELECT t1.item_id AS item_id, t1.access_token AS access_token, t1.active AS active FROM `Items` AS t1 LEFT JOIN `User_Sessions` AS t2 ON t1.user_id = t2.user_id WHERE t2.session_id = ?',[session_id]);
-      connection.release();
-      return sendResponse(response, 200, true, JSON.stringify(new_items));
+      return sendResponse(response, 200, true, null);
     } catch(e) {
       // If some error in query execution, we release the connection and reject w/ Error
       connection.release();
-      let err = e.msg || e;
+      let err = e.sqlMessage || e;
       return sendResponse(response, 503, false, err);
     }
   });

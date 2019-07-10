@@ -34,6 +34,7 @@ const { prettyPrintResponse } = require('./common.js');
 const userRouter = require('../routes/user');
 const adminRouter = require('../routes/admin');
 const transactionsRouter = require('../routes/transactions');
+const budgetsRouter = require('../routes/budgets');
 
 
 // --------------------------------------------
@@ -179,6 +180,7 @@ app.use((req,res,next)=>{
 app.use('/user/',userRouter);
 app.use('/admin/',adminRouter);
 app.use('/transactions/',transactionsRouter);
+app.use('/budgets/',budgetsRouter);
 
 // --------------------------------------------
 // --- SERVER SETUP
